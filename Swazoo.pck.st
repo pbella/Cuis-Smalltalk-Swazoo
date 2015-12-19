@@ -1,11 +1,11 @@
 'From Cuis 4.2 of 25 July 2013 [latest update: #1806] on 22 August 2013 at 2:49:55.438653 pm'!
 'Description Please enter a description for this package '!
-!provides: 'Swazoo' 1 1!
+!provides: 'Swazoo' 1 2!
 !requires: 'Cuis-System-Hashing' 1 0 nil!
-!requires: 'Cuis-CompatibilityWithOtherSmalltalks' 1 0 nil!
+!requires: 'Cuis-CompatibilityWithOtherSmalltalks' 1 3 nil!
 !requires: 'Cuis-Network-Protocols' 1 0 nil!
 !requires: 'Cuis-Network-Url' 1 0 nil!
-!requires: 'Sport' 1 0 nil!
+!requires: 'Sport' 1 1 nil!
 !classDefinition: #HTTPException category: #'Swazoo-Exceptions'!
 Error subclass: #HTTPException
 	instanceVariableNames: 'response'
@@ -1602,7 +1602,7 @@ nextAvailable: aNumber
 
     ^underlyingStream nextAvailable: aNumber! !
 
-!SpFilename methodsFor: '*Swazoo-accessing' stamp: 'pete 5/28/2008 15:11'!
+!SpFilename methodsFor: '*Swazoo-accessing' stamp: 'pb 12/18/2015 19:33'!
 asAbsoluteFilename
 	"Answer a Filename pointing to the same file using absolute path.
 	The method may answer the receiver it it is already absolute."
@@ -1610,7 +1610,8 @@ asAbsoluteFilename
 	^self isAbsolute
 		ifTrue: [self]
 		ifFalse: [self class named: 
-			(FileDirectory default pathName, (String with: self separator), 
+			"FIXME FileMan - was FileDirectory default pathName"
+			(FmDirectoryEntry currentDirectory asString, (String with: self separator), 
 				(SpEnvironment onWindows
 					ifTrue: [self asString copyReplaceAll: '.\' with: ''] "windows only"
 					ifFalse: [self asString copyReplaceAll: './' with: ''] "unix only!!"))]! !
@@ -1644,13 +1645,18 @@ createdTimestamp
 	^SpTimestamp fromSeconds: entry creationTime "is this correct on all OSes?"
 ! !
 
-!SpFilename methodsFor: '*Swazoo-services' stamp: 'JM 4/18/2007 15:24'!
+!SpFilename methodsFor: '*Swazoo-services' stamp: 'pb 12/18/2015 20:13'!
 delete
 	| dir |
+	"FIXME FileMan
 	dir := FileDirectory forFileName: self asAbsoluteFilename asString.
 	self isDirectory
 		ifTrue: [dir deleteDirectory: self asString]
-		ifFalse: [dir deleteFileNamed: self tail ifAbsent: [] ]! !
+		ifFalse: [dir deleteFileNamed: self tail ifAbsent: [] ]"
+	dir := self asAbsoluteFilename asString.
+        self isDirectory
+                ifTrue: [dir asDirectoryEntry delete]
+                ifFalse: [dir asFileEntry delete ]! !
 
 !SpFilename methodsFor: '*Swazoo-accessing' stamp: 'JM 4/18/2007 15:13'!
 directory
@@ -1710,9 +1716,11 @@ isAbsolute
 		^(self asString at: 1) isLetter and: [(self asString at: 2) = $:]]. "absolute pathnames on windows looks like 'C:'"
 	^(self asString at: 1) == self separator! !
 
-!SpFilename methodsFor: '*Swazoo-testing' stamp: 'JM 4/18/2007 14:33'!
+!SpFilename methodsFor: '*Swazoo-testing' stamp: 'pb 12/18/2015 20:14'!
 isDirectory
-	^FileDirectory default directoryExists: self asString! !
+	"FIXME FileMan
+	^FileDirectory default directoryExists: self asString"
+	^ self asString asDirectoryEntry exists! !
 
 !SpFilename methodsFor: '*Swazoo-testing' stamp: 'JM 4/18/2007 13:00'!
 isRelative
@@ -1727,29 +1735,35 @@ lastModified
 lastSeparatorIndex
 	^self asString lastIndexOf: self separator ifAbsent: [nil]! !
 
-!SpFilename methodsFor: '*Swazoo-services' stamp: 'pete 5/28/2008 15:15'!
+!SpFilename methodsFor: '*Swazoo-services' stamp: 'pb 12/18/2015 20:16'!
 makeDirectory
-	| dir |
+	| |
+	"FIXME - FileMan
 	dir := FileDirectory forFileName: self asAbsoluteFilename asString.
 	[dir createDirectory: self asString]
 		on: Error
-		do: [:ex | ].! !
+		do: [:ex | ]."
+	self asAbsoluteFilename asString asDirectoryEntry assureExistence.! !
 
-!SpFilename methodsFor: '*Swazoo-accessing' stamp: 'mivsek 8/22/2007 16:51'!
+!SpFilename methodsFor: '*Swazoo-accessing' stamp: 'pb 12/18/2015 19:36'!
 modifiedTimestamp
 	"a SpTimestamp
 	timestamp of last file modification"
-	| dir entry |
+	| entry |
+	"FIXME - FileMan
 	dir := FileDirectory forFileName: self asAbsoluteFilename asString.
-	entry := dir directoryEntryFor: self tail.
+	entry := dir directoryEntryFor: self tail."
+	entry := self asAbsoluteFilename asString asFileEntry.
 	^SpTimestamp fromSeconds: entry modificationTime "is this correct on all OSes?"
 ! !
 
-!SpFilename methodsFor: '*Swazoo-private' stamp: 'JM 4/18/2007 13:49'!
+!SpFilename methodsFor: '*Swazoo-private' stamp: 'pb 12/18/2015 19:31'!
 separator
 	"Answer the platform's filename component separator."
-
-	^FileDirectory primPathNameDelimiter! !
+	"FIXME - FileMan... will need to be changed for Windows
+	^FileDirectory primPathNameDelimiter
+	"
+	^ $/.! !
 
 !SpFilename methodsFor: '*Swazoo-accessing' stamp: 'JM 4/18/2007 15:06'!
 tail
